@@ -1,0 +1,34 @@
+List<User> usersWithCPQPackagePermissions = [SELECT Name,IsActive
+   FROM User 
+   WHERE Id in (
+       SELECT UserId 
+       FROM UserPackageLicense 
+       WHERE (PackageLicense.NamespacePrefix = 'SBQQ'))];
+
+PermissionSetLicense CPQUserPSL = [select id,developerName from permissionsetlicense where developerName = 'SalesforceCPQ_CPQStandardPerm'];
+PermissionSetLicense CPQUserAAPSL = [select id,developerName from permissionsetlicense where developerName = 'SalesforceCPQ_CPQAAPerm'];    
+List<PermissionSetLicenseAssign> alreadyAssigned = [
+    SELECT Id,AssigneeId from PermissionSetLicenseAssign WHERE
+    PermissionSetLicenseId = :CPQUserPSL.Id OR PermissionSetLicenseId = :CPQUserAAPSL.Id
+];
+Set<Id> alreadyAssignedIds = new Set<Id>();
+for(PermissionSetLicenseAssign x : alreadyAssigned){
+    alreadyAssignedIds.add(x.AssigneeId);
+}
+
+List<PermissionSetLicenseAssign> newPSAssignments = new List<PermissionSetLicenseAssign>();
+
+for(User u : usersWithCPQPackagePermissions){
+    if(!alreadyAssignedIds.contains(u.Id) && u.IsActive){
+        PermissionSetLicenseAssign tmpPSA = new PermissionSetLicenseAssign
+        (PermissionSetLicenseId = CPQUserPSL.Id, AssigneeId = u.Id);
+        
+        PermissionSetLicenseAssign tmpAAPSA = new PermissionSetLicenseAssign
+        (PermissionSetLicenseId = CPQUserAAPSL.Id, AssigneeId = u.Id);
+        
+        newPSAssignments.add(tmpPSA);
+        newPSAssignments.add(tmpAAPSA);
+    }
+}
+System.debug(newPSAssignments.size());
+upsert newPSAssignments;
