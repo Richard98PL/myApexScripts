@@ -7,14 +7,29 @@ List<User> usersWithCPQPackagePermissions = [SELECT Name,IsActive
 
 PermissionSetLicense CPQUserPSL = [select id,developerName from permissionsetlicense where developerName = 'SalesforceCPQ_CPQStandardPerm'];
 PermissionSetLicense CPQUserAAPSL = [select id,developerName from permissionsetlicense where developerName = 'SalesforceCPQ_CPQAAPerm'];    
+
 List<PermissionSetLicenseAssign> alreadyAssigned = [
     SELECT Id,AssigneeId from PermissionSetLicenseAssign WHERE
-    PermissionSetLicenseId = :CPQUserPSL.Id OR PermissionSetLicenseId = :CPQUserAAPSL.Id
+    PermissionSetLicenseId = :CPQUserPSL.Id
 ];
+
+List<PermissionSetLicenseAssign> alreadyAssignedAA = [
+    SELECT Id,AssigneeId from PermissionSetLicenseAssign WHERE
+    PermissionSetLicenseId = :CPQUserAAPSL.Id
+];
+
+
 Set<Id> alreadyAssignedIds = new Set<Id>();
 for(PermissionSetLicenseAssign x : alreadyAssigned){
     alreadyAssignedIds.add(x.AssigneeId);
 }
+
+Set<Id> alreadyAssignedIdsAA = new Set<Id>();
+for(PermissionSetLicenseAssign x : alreadyAssignedAA){
+    alreadyAssignedIdsAA.add(x.AssigneeId);
+}
+
+
 
 List<PermissionSetLicenseAssign> newPSAssignments = new List<PermissionSetLicenseAssign>();
 
@@ -22,11 +37,14 @@ for(User u : usersWithCPQPackagePermissions){
     if(!alreadyAssignedIds.contains(u.Id) && u.IsActive){
         PermissionSetLicenseAssign tmpPSA = new PermissionSetLicenseAssign
         (PermissionSetLicenseId = CPQUserPSL.Id, AssigneeId = u.Id);
-        
+                
+        newPSAssignments.add(tmpPSA);
+    }
+    
+    if(!alreadyAssignedIdsAA.contains(u.Id) && u.IsActive){
         PermissionSetLicenseAssign tmpAAPSA = new PermissionSetLicenseAssign
         (PermissionSetLicenseId = CPQUserAAPSL.Id, AssigneeId = u.Id);
         
-        newPSAssignments.add(tmpPSA);
         newPSAssignments.add(tmpAAPSA);
     }
 }
